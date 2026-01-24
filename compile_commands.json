@@ -1,0 +1,15 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-c",
+      "-Iinclude/",
+      "-o",
+      "main",
+      "src/main.c"
+    ],
+    "directory": "/home/lucas/Projects/aoe",
+    "file": "/home/lucas/Projects/aoe/src/main.c",
+    "output": "/home/lucas/Projects/aoe/main"
+  }
+]
