@@ -1,32 +1,46 @@
 #include <stdint.h>
-#include <time.h>
 #include <stdlib.h>
 
 #include "raylib.h"
 #include "rcamera.h"
 
 #define MAX_HEIGHT 20
+#define CELL_LENGTH 10
 
 typedef struct Ground {
-    int32_t width, height;
-    int32_t* heights;
+    Vector3 origin;
+    int32_t grid_width, grid_height;
+    int32_t** heights;
 } Ground;
 
 void GenerateGround(int32_t width, int32_t height, Ground* ground) {
-    srand(time(NULL));
+    ground->origin = (Vector3){.x = 0.f, .y = 0.f, .z = 0.f};
 
+    ground->heights = (int32_t**) malloc(ground->grid_width * sizeof(int32_t*));
+    for(int32_t i = 0; i < ground->grid_width; i++) {
+        ground->heights[i] = (int32_t*) malloc(ground->grid_height * sizeof(int32_t));
+
+        for(int32_t j = 0; j < ground->grid_height; j++) {
+            ground->heights[i][j] = GetRandomValue(0, MAX_HEIGHT);
+        }
+    }
+}
+
+void FreeGround(Ground* ground) {
+    for(int32_t i = 0; i < ground->grid_width; i++) {
+        free(ground->heights[i]);
+    }
+    free(ground->heights);
 }
 
 void DrawGround(const Ground* ground) {
-    Vector3 points[7] = {
-        {.x = 10, .y = rand() % 3, .z = 0},
-        {.x = 10, .y = rand() % 3, .z = -10},
-        {.x = 0, .y = rand() % 3, .z = 0},
-        {.x = 0, .y = rand() % 3, .z = -10},
-        {.x = 10, .y = rand() % 3, .z = -20},
-        {.x = 0, .y = rand() % 3, .z = -30},
-        {.x = 10, .y = rand() % 3, .z = -30},
-    };
+    for(int32_t i = 0; i < ground->grid_width; i++) {
+        int32_t point_count = 2;
+        Vector2* points = (Vector2*) malloc(point_count * sizeof(Vector2));
+
+        // DrawTriangleStrip3D(points, 7, RED);
+    }
+
 }
 
 int main(void)
@@ -46,17 +60,8 @@ int main(void)
 
     int cameraMode = CAMERA_FIRST_PERSON;
 
-    // Generates some random columns
-    float heights[MAX_COLUMNS] = { 0 };
-    Vector3 positions[MAX_COLUMNS] = { 0 };
-    Color colors[MAX_COLUMNS] = { 0 };
-
-    for (int i = 0; i < MAX_COLUMNS; i++)
-    {
-        heights[i] = (float)GetRandomValue(1, 12);
-        positions[i] = (Vector3){ (float)GetRandomValue(-15, 15), heights[i]/2.0f, (float)GetRandomValue(-15, 15) };
-        colors[i] = (Color){ GetRandomValue(20, 255), GetRandomValue(10, 55), 30, 255 };
-    }
+    Ground ground;
+    GenerateGround(10, 10, &ground);
 
     DisableCursor();                    // Limit cursor to relative movement inside the window
 
@@ -79,7 +84,6 @@ int main(void)
             ClearBackground(RAYWHITE);
 
             BeginMode3D(camera);
-                DrawTriangleStrip3D(points, 7, RED); \
                 // DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY); // Draw ground
                 // DrawCube((Vector3){ -16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, BLUE);     // Draw a blue wall
                 // DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);      // Draw a green wall
@@ -91,7 +95,7 @@ int main(void)
                     DrawCube(positions[i], 2.0f, heights[i], 2.0f, colors[i]);
                     DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
                 } */
-
+                DrawGround(&ground);
 
             EndMode3D();
 
