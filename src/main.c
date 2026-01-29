@@ -1,11 +1,35 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "raylib.h"
-#include "rcamera.h"
+#include "raylib/raylib.h"
+#include "raylib/rcamera.h"
 
-#define MAX_HEIGHT 20
-#define CELL_LENGTH 10
+#define MAX_HEIGHT 10
+#define CELL_LENGTH 5
+
+const Color COLORS[21] = {
+    LIGHTGRAY,
+    GRAY,
+    DARKGRAY,
+    YELLOW,
+    GOLD,
+    ORANGE,
+    PINK,
+    RED,
+    MAROON,
+    GREEN,
+    LIME,
+    DARKGREEN,
+    SKYBLUE,
+    BLUE,
+    DARKBLUE,
+    PURPLE,
+    VIOLET,
+    DARKPURPLE,
+    BEIGE,
+    BROWN,
+    DARKBROWN
+};
 
 typedef struct Ground {
     Vector3 origin;
@@ -15,6 +39,8 @@ typedef struct Ground {
 
 void GenerateGround(int32_t width, int32_t height, Ground* ground) {
     ground->origin = (Vector3){.x = 0.f, .y = 0.f, .z = 0.f};
+    ground->grid_width = width;
+    ground->grid_height = height;
 
     ground->heights = (int32_t**) malloc(ground->grid_width * sizeof(int32_t*));
     for(int32_t i = 0; i < ground->grid_width; i++) {
@@ -26,7 +52,7 @@ void GenerateGround(int32_t width, int32_t height, Ground* ground) {
     }
 }
 
-void FreeGround(Ground* ground) {
+void FreeGround(const Ground* ground) {
     for(int32_t i = 0; i < ground->grid_width; i++) {
         free(ground->heights[i]);
     }
@@ -34,13 +60,31 @@ void FreeGround(Ground* ground) {
 }
 
 void DrawGround(const Ground* ground) {
-    for(int32_t i = 0; i < ground->grid_width; i++) {
-        int32_t point_count = 2;
-        Vector2* points = (Vector2*) malloc(point_count * sizeof(Vector2));
+    int32_t point_count = ground->grid_height * 2;
+    Vector3* points = (Vector3*) malloc(point_count * sizeof(Vector3));
 
-        // DrawTriangleStrip3D(points, 7, RED);
+    // right is -x
+    // front is -z
+    for(int32_t i = 0; i < ground->grid_width; i++) {
+        for(int32_t j = 0; j < ground->grid_height; j++) {
+            points[2*j] = points[2*j + 1] = ground->origin;
+
+            points[2*j].x += CELL_LENGTH * i;
+            points[2*j + 1].x += CELL_LENGTH * (i+1);
+
+            points[2*j].z -= CELL_LENGTH * j;
+            points[2*j + 1].z -= CELL_LENGTH * j;
+
+            points[2*j].y += (float)(ground->heights[i][j]);
+            if (i < ground->grid_width - 1) {
+                points[2*j + 1].y += (float)(ground->heights[i+1][j]);
+            }
+        }
+
+        DrawTriangleStrip3D(points, point_count, COLORS[i%21]);
     }
 
+    free(points);
 }
 
 int main(void)
@@ -52,16 +96,16 @@ int main(void)
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
-    camera.position = (Vector3){ 0.0f, 2.0f, 4.0f };    // Camera position
-    camera.target = (Vector3){ 0.0f, 2.0f, 0.0f };      // Camera looking at point
+    camera.position = (Vector3){ 0.0f, 4.0f, 4.0f };    // Camera position
+    camera.target = (Vector3){ 0.0f, 4.0f, 0.0f };      // Camera looking at point
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 60.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
 
-    int cameraMode = CAMERA_FIRST_PERSON;
+    int cameraMode = CAMERA_FREE;
 
     Ground ground;
-    GenerateGround(10, 10, &ground);
+    GenerateGround(100, 100, &ground);
 
     DisableCursor();                    // Limit cursor to relative movement inside the window
 
@@ -106,6 +150,7 @@ int main(void)
     // De-Initialization
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context
+    FreeGround(&ground);
     //--------------------------------------------------------------------------------------
 
     return 0;
