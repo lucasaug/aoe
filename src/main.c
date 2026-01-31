@@ -4,31 +4,15 @@
 #include "raylib/raylib.h"
 #include "raylib/rcamera.h"
 
-#define MAX_HEIGHT 10
+#include "open-simplex-noise/open-simplex-noise.h"
+
+#define MAX_HEIGHT 200
 #define CELL_LENGTH 5
 
-const Color COLORS[21] = {
-    LIGHTGRAY,
-    GRAY,
-    DARKGRAY,
-    YELLOW,
-    GOLD,
-    ORANGE,
-    PINK,
-    RED,
-    MAROON,
+const Color COLORS[3] = {
     GREEN,
     LIME,
     DARKGREEN,
-    SKYBLUE,
-    BLUE,
-    DARKBLUE,
-    PURPLE,
-    VIOLET,
-    DARKPURPLE,
-    BEIGE,
-    BROWN,
-    DARKBROWN
 };
 
 typedef struct Ground {
@@ -38,6 +22,11 @@ typedef struct Ground {
 } Ground;
 
 void GenerateGround(int32_t width, int32_t height, Ground* ground) {
+	struct osn_context *ctx;
+
+	open_simplex_noise(77374, &ctx);
+    const double FEATURE_SIZE = 24;
+
     ground->origin = (Vector3){.x = 0.f, .y = 0.f, .z = 0.f};
     ground->grid_width = width;
     ground->grid_height = height;
@@ -47,7 +36,10 @@ void GenerateGround(int32_t width, int32_t height, Ground* ground) {
         ground->heights[i] = (int32_t*) malloc(ground->grid_height * sizeof(int32_t));
 
         for(int32_t j = 0; j < ground->grid_height; j++) {
-            ground->heights[i][j] = GetRandomValue(0, MAX_HEIGHT);
+
+            double value = MAX_HEIGHT * open_simplex_noise4(ctx, (double) i / FEATURE_SIZE, (double) j / FEATURE_SIZE, 0.0, 0.0);
+            ground->heights[i][j] = value;
+            // ground->heights[i][j] = GetRandomValue(0, MAX_HEIGHT);
         }
     }
 }
