@@ -1,103 +1,54 @@
 #include <stdint.h>
-#include <stdlib.h>
 
 #include "raylib/raylib.h"
 #include "raylib/rcamera.h"
 
-#include "open-simplex-noise/open-simplex-noise.h"
-
-#define MAX_HEIGHT 200
-#define CELL_LENGTH 5
-
-const Color COLORS[3] = {
-    GREEN,
-    LIME,
-    DARKGREEN,
-};
+#define MAX_HEIGHT 2000
 
 typedef struct Ground {
     Vector3 origin;
-    int32_t grid_width, grid_height;
-    int32_t** heights;
+    Model model;
 } Ground;
 
 void GenerateGround(int32_t width, int32_t height, Ground* ground) {
-	struct osn_context *ctx;
+    ground->origin = (Vector3){.x = 0., .y = -100., .z = 0.};
+    Image noise = GenImagePerlinNoise(500., 500., 0., 0., 4.);
+    Mesh heightmapMesh = GenMeshHeightmap(noise, (Vector3){
+        .x = width, .y = MAX_HEIGHT, .z = height
+    });
+    ground->model = LoadModelFromMesh(heightmapMesh);
 
-	open_simplex_noise(77374, &ctx);
-    const double FEATURE_SIZE = 24;
-
-    ground->origin = (Vector3){.x = 0.f, .y = 0.f, .z = 0.f};
-    ground->grid_width = width;
-    ground->grid_height = height;
-
-    ground->heights = (int32_t**) malloc(ground->grid_width * sizeof(int32_t*));
-    for(int32_t i = 0; i < ground->grid_width; i++) {
-        ground->heights[i] = (int32_t*) malloc(ground->grid_height * sizeof(int32_t));
-
-        for(int32_t j = 0; j < ground->grid_height; j++) {
-
-            double value = MAX_HEIGHT * open_simplex_noise4(ctx, (double) i / FEATURE_SIZE, (double) j / FEATURE_SIZE, 0.0, 0.0);
-            ground->heights[i][j] = value;
-            // ground->heights[i][j] = GetRandomValue(0, MAX_HEIGHT);
-        }
-    }
+    ImageColorTint(&noise, GREEN);
+    Texture2D groundTexture = LoadTextureFromImage(noise);
+    ground->model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = groundTexture;
+    UnloadImage(noise);
 }
 
 void FreeGround(const Ground* ground) {
-    for(int32_t i = 0; i < ground->grid_width; i++) {
-        free(ground->heights[i]);
-    }
-    free(ground->heights);
+    UnloadModel(ground->model);
 }
 
 void DrawGround(const Ground* ground) {
-    int32_t point_count = ground->grid_height * 2;
-    Vector3* points = (Vector3*) malloc(point_count * sizeof(Vector3));
-
-    // right is -x
-    // front is -z
-    for(int32_t i = 0; i < ground->grid_width; i++) {
-        for(int32_t j = 0; j < ground->grid_height; j++) {
-            points[2*j] = points[2*j + 1] = ground->origin;
-
-            points[2*j].x += CELL_LENGTH * i;
-            points[2*j + 1].x += CELL_LENGTH * (i+1);
-
-            points[2*j].z -= CELL_LENGTH * j;
-            points[2*j + 1].z -= CELL_LENGTH * j;
-
-            points[2*j].y += (float)(ground->heights[i][j]);
-            if (i < ground->grid_width - 1) {
-                points[2*j + 1].y += (float)(ground->heights[i+1][j]);
-            }
-        }
-
-        DrawTriangleStrip3D(points, point_count, COLORS[i%21]);
-    }
-
-    free(points);
+    DrawModel(ground->model, ground->origin, 1.0, GREEN);
 }
 
 int main(void)
 {
     const int screenWidth = 800;
-    const int screenHeight = 450;
+    const int screenHeight = 800;
 
     InitWindow(screenWidth, screenHeight, "My weird game");
 
     // Define the camera to look into our 3d world (position, target, up vector)
     Camera camera = { 0 };
-    camera.position = (Vector3){ 0.0f, 4.0f, 4.0f };    // Camera position
-    camera.target = (Vector3){ 0.0f, 4.0f, 0.0f };      // Camera looking at point
+    camera.position = (Vector3){ 0.0f, MAX_HEIGHT, 0.0f };   // Camera position
+    camera.target = (Vector3){ 0.0f, 0., -4.0f };    // Camera looking at point
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
     camera.fovy = 60.0f;                                // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
 
-    int cameraMode = CAMERA_FREE;
-
     Ground ground;
-    GenerateGround(100, 100, &ground);
+    GenerateGround(10000, 10000, &ground);
 
     DisableCursor();                    // Limit cursor to relative movement inside the window
 
@@ -107,10 +58,70 @@ int main(void)
     // Main game loop
     while (!WindowShouldClose())        // Detect window close button or ESC key
     {
+
+        Ray ray = {
+            .position=camera.position,
+            .direction={.x=0., .y=-1., .z=0.}
+        };
+        ray.position.y += 10.;
+
+        RayCollision collision = {0};
+        for (int i = 0; i < ground.model.meshCount; i++) {
+            ray.direction.y = -1;
+            collision = GetRayCollisionMesh(
+                ray, ground.model.meshes[i], ground.model.transform
+            );
+
+            if (collision.hit) {
+                camera.position.y = collision.point.y;
+                break;
+            }
+
+            // ray.direction.y = 1;
+            // collision = GetRayCollisionMesh(
+            //     ray, ground.model.meshes[i], ground.model.transform
+            // );
+            //
+            // if (collision.hit) {
+            //     // camera.position.y = collision.point.y;
+            //     break;
+            // }
+        }
+
         // Update camera computes movement internally depending on the camera mode
         // Some default standard keyboard/mouse inputs are hardcoded to simplify use
         // For advanced camera controls, it's recommended to compute camera movement manually
-        UpdateCamera(&camera, cameraMode);                  // Update camera
+        //
+        // CAMERA_CUSTOM = 0,              // Camera custom, controlled by user (UpdateCamera() does nothing)
+        // CAMERA_FREE,                    // Camera free mode
+        // CAMERA_ORBITAL,                 // Camera orbital, around target, zoom supported
+        // CAMERA_FIRST_PERSON,            // Camera first person
+        // CAMERA_THIRD_PERSON             // Camera third person
+        // UpdateCamera(&camera, CAMERA_FIRST_PERSON);           // Update camera
+        // UpdateCameraPro(&camera, (Vector3){0.,0.,-1.}, (Vector3){0., 0., 0.}, 1.);
+        Vector2 md = GetMouseDelta();
+        bool forward = IsKeyDown(KEY_W);
+        bool backwards = IsKeyDown(KEY_S);
+        bool left = IsKeyDown(KEY_A);
+        bool right = IsKeyDown(KEY_D);
+        Vector3 delta = (Vector3) { 0., 0., 0.};
+        if (forward) {
+            delta.x = 1;
+        }
+        if (backwards) {
+            delta.x = -1;
+        }
+        if (left) {
+            delta.y = -1;
+        }
+        if (right) {
+            delta.y = 1;
+        }
+
+        UpdateCameraPro(&camera,
+                /* { forward-backward, left-right, up-down } */ delta,
+                /* { yaw, pitch, roll } */ (Vector3) { md.x * 0.05f, md.y * 0.05f, 0.0f },
+                /* zoom */ -10.0f);
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -133,7 +144,34 @@ int main(void)
                 } */
                 DrawGround(&ground);
 
+                // Vector3 endPos = camera.position;
+                // endPos.y += 10.;
+                // DrawCapsule(camera.position, endPos, 10., 10, 10, BLUE);
+                DrawCube(camera.position, 10., 10., 10., BLUE);
+
             EndMode3D();
+
+            DrawFPS(10, 10);
+
+            DrawText(TextFormat("Ray:"), 200, 60, 20, RED);
+            DrawText(TextFormat("Position X: %f", ray.position.x), 200, 80, 20, RED);
+            DrawText(TextFormat("Position Y: %f", ray.position.y), 200, 100, 20, RED);
+            DrawText(TextFormat("Position Z: %f", ray.position.z), 200, 120, 20, RED);
+
+            DrawText(TextFormat("Direction X: %f", ray.direction.x), 500, 80, 20, RED);
+            DrawText(TextFormat("Direction Y: %f", ray.direction.y), 500, 100, 20, RED);
+            DrawText(TextFormat("Direction Z: %f", ray.direction.z), 500, 120, 20, RED);
+
+            DrawText(TextFormat("Collision:"), 200, 180, 20, RED);
+            DrawText(TextFormat("Hit: %d", collision.hit), 200, 200, 20, RED);
+            DrawText(TextFormat("%f", collision.point.x), 200, 220, 20, RED);
+            DrawText(TextFormat("%f", collision.point.y), 200, 240, 20, RED);
+            DrawText(TextFormat("%f", collision.point.z), 200, 260, 20, RED);
+
+            DrawText(TextFormat("Camera:"), 500, 180, 20, RED);
+            DrawText(TextFormat("%f", camera.position.x), 500, 220, 20, RED);
+            DrawText(TextFormat("%f", camera.position.y), 500, 240, 20, RED);
+            DrawText(TextFormat("%f", camera.position.z), 500, 260, 20, RED);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
