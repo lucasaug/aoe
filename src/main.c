@@ -1,14 +1,21 @@
 #include <stdint.h>
 
 #include "raylib/raylib.h"
+#include "raylib/raymath.h"
 #include "raylib/rcamera.h"
 
 #define MAX_HEIGHT 2000
+#define TARGET_TOLERANCE 10
 
 typedef struct Ground {
     Vector3 origin;
     Model model;
 } Ground;
+
+typedef struct MovementTarget {
+    Vector3 destination;
+    bool arrived;
+} MovementTarget;
 
 void GenerateGround(int32_t width, int32_t height, Ground* ground) {
     ground->origin = (Vector3){.x = 0., .y = -100., .z = 0.};
@@ -36,6 +43,8 @@ int main(void)
 {
     const int screenWidth = 800;
     const int screenHeight = 800;
+    MovementTarget currentTarget = {0};
+    currentTarget.arrived = true;
 
     InitWindow(screenWidth, screenHeight, "My weird game");
 
@@ -49,8 +58,10 @@ int main(void)
 
     Ground ground;
     GenerateGround(10000, 10000, &ground);
-
     DisableCursor();                    // Limit cursor to relative movement inside the window
+
+    // ShowCursor();
+    // SetMouseCursor(MOUSE_CURSOR_CROSSHAIR);
 
     SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
@@ -73,7 +84,7 @@ int main(void)
             );
 
             if (collision.hit) {
-                camera.position.y = collision.point.y;
+                camera.position.y = collision.point.y + 100;
                 break;
             }
 
@@ -88,6 +99,20 @@ int main(void)
             // }
         }
 
+        bool pressed = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+        if (pressed) {
+            Ray mouseRay = GetScreenToWorldRay(GetMousePosition(), camera);
+
+            collision = GetRayCollisionMesh(
+                mouseRay, ground.model.meshes[0], ground.model.transform
+            );
+
+            if (collision.hit) {
+                currentTarget.destination = collision.point;
+                currentTarget.arrived = false;
+            }
+        }
+
         // Update camera computes movement internally depending on the camera mode
         // Some default standard keyboard/mouse inputs are hardcoded to simplify use
         // For advanced camera controls, it's recommended to compute camera movement manually
@@ -100,10 +125,13 @@ int main(void)
         // UpdateCamera(&camera, CAMERA_FIRST_PERSON);           // Update camera
         // UpdateCameraPro(&camera, (Vector3){0.,0.,-1.}, (Vector3){0., 0., 0.}, 1.);
         Vector2 md = GetMouseDelta();
+
         bool forward = IsKeyDown(KEY_W);
         bool backwards = IsKeyDown(KEY_S);
         bool left = IsKeyDown(KEY_A);
         bool right = IsKeyDown(KEY_D);
+
+        // forward = backwards = left = right = false;
         Vector3 delta = (Vector3) { 0., 0., 0.};
         if (forward) {
             delta.x = 1;
@@ -118,10 +146,25 @@ int main(void)
             delta.y = 1;
         }
 
+        if (!currentTarget.arrived) {
+
+            delta.x = currentTarget.destination.x - camera.position.x;
+            delta.y = currentTarget.destination.z - camera.position.z;
+
+            if (delta.x < TARGET_TOLERANCE && delta.y < TARGET_TOLERANCE) {
+                delta = (Vector3){0};
+                currentTarget.arrived = true;
+            } else {
+                delta = Vector3Normalize(delta);
+                delta.x *= 10;
+                delta.y *= 10;
+            }
+        }
+
         UpdateCameraPro(&camera,
                 /* { forward-backward, left-right, up-down } */ delta,
                 /* { yaw, pitch, roll } */ (Vector3) { md.x * 0.05f, md.y * 0.05f, 0.0f },
-                /* zoom */ -10.0f);
+                /* zoom */ 0.0f);
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -162,11 +205,11 @@ int main(void)
             DrawText(TextFormat("Direction Y: %f", ray.direction.y), 500, 100, 20, RED);
             DrawText(TextFormat("Direction Z: %f", ray.direction.z), 500, 120, 20, RED);
 
-            DrawText(TextFormat("Collision:"), 200, 180, 20, RED);
-            DrawText(TextFormat("Hit: %d", collision.hit), 200, 200, 20, RED);
-            DrawText(TextFormat("%f", collision.point.x), 200, 220, 20, RED);
-            DrawText(TextFormat("%f", collision.point.y), 200, 240, 20, RED);
-            DrawText(TextFormat("%f", collision.point.z), 200, 260, 20, RED);
+            DrawText(TextFormat("Moving to:"), 200, 180, 20, RED);
+            DrawText(TextFormat("Arrived: %d", currentTarget.arrived), 200, 200, 20, RED);
+            DrawText(TextFormat("%f", currentTarget.destination.x), 200, 220, 20, RED);
+            DrawText(TextFormat("%f", currentTarget.destination.y), 200, 240, 20, RED);
+            DrawText(TextFormat("%f", currentTarget.destination.z), 200, 260, 20, RED);
 
             DrawText(TextFormat("Camera:"), 500, 180, 20, RED);
             DrawText(TextFormat("%f", camera.position.x), 500, 220, 20, RED);
