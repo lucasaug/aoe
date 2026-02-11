@@ -1,11 +1,14 @@
 #include <stdint.h>
+#include <stdio.h>
 
 #include "raylib/raylib.h"
 #include "raylib/raymath.h"
 #include "raylib/rcamera.h"
 
-#define MAX_HEIGHT 2000
-#define TARGET_TOLERANCE 10
+#define MAX_HEIGHT 500
+#define TARGET_TOLERANCE 1
+
+#define CROSSHAIR_LENGTH 10
 
 typedef struct Ground {
     Vector3 origin;
@@ -76,6 +79,7 @@ int main(void)
         };
         ray.position.y += 10.;
 
+        float yOffset = 0.;
         RayCollision collision = {0};
         for (int i = 0; i < ground.model.meshCount; i++) {
             ray.direction.y = -1;
@@ -84,7 +88,7 @@ int main(void)
             );
 
             if (collision.hit) {
-                camera.position.y = collision.point.y + 100;
+                yOffset = (collision.point.y + 10) - camera.position.y;
                 break;
             }
 
@@ -99,20 +103,6 @@ int main(void)
             // }
         }
 
-        bool pressed = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
-        if (pressed) {
-            Ray mouseRay = GetScreenToWorldRay(GetMousePosition(), camera);
-
-            collision = GetRayCollisionMesh(
-                mouseRay, ground.model.meshes[0], ground.model.transform
-            );
-
-            if (collision.hit) {
-                currentTarget.destination = collision.point;
-                currentTarget.arrived = false;
-            }
-        }
-
         // Update camera computes movement internally depending on the camera mode
         // Some default standard keyboard/mouse inputs are hardcoded to simplify use
         // For advanced camera controls, it's recommended to compute camera movement manually
@@ -125,44 +115,47 @@ int main(void)
         // UpdateCamera(&camera, CAMERA_FIRST_PERSON);           // Update camera
         // UpdateCameraPro(&camera, (Vector3){0.,0.,-1.}, (Vector3){0., 0., 0.}, 1.);
         Vector2 md = GetMouseDelta();
+        Vector2 screenCenter = { screenWidth/2.0f, screenHeight/2.0f };
 
-        bool forward = IsKeyDown(KEY_W);
-        bool backwards = IsKeyDown(KEY_S);
-        bool left = IsKeyDown(KEY_A);
-        bool right = IsKeyDown(KEY_D);
+        bool pressed = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+        if (pressed) {
+            Vector2 screenCenter = { screenWidth/2.0f, screenHeight/2.0f };
+            Ray clickRay = GetScreenToWorldRay(screenCenter, camera);
+            clickRay.position.y += 100;
 
-        // forward = backwards = left = right = false;
-        Vector3 delta = (Vector3) { 0., 0., 0.};
-        if (forward) {
-            delta.x = 1;
-        }
-        if (backwards) {
-            delta.x = -1;
-        }
-        if (left) {
-            delta.y = -1;
-        }
-        if (right) {
-            delta.y = 1;
+            collision = GetRayCollisionMesh(
+                clickRay, ground.model.meshes[0], ground.model.transform
+            );
+
+            if (collision.hit) {
+                currentTarget.destination = collision.point;
+                currentTarget.arrived = false;
+            }
         }
 
+        float forwardsOffset = 0.;
+        float rightOffset = 0.;
         if (!currentTarget.arrived) {
+            Vector3 direction = Vector3Subtract(
+                currentTarget.destination,
+                camera.position
+            );
+            float distance = Vector2Length((Vector2) { direction.x, direction.z });
 
-            delta.x = currentTarget.destination.x - camera.position.x;
-            delta.y = currentTarget.destination.z - camera.position.z;
-
-            if (delta.x < TARGET_TOLERANCE && delta.y < TARGET_TOLERANCE) {
-                delta = (Vector3){0};
+            if (distance < TARGET_TOLERANCE) {
                 currentTarget.arrived = true;
+
             } else {
-                delta = Vector3Normalize(delta);
-                delta.x *= 10;
-                delta.y *= 10;
+                // Normalize to get the unit direction vector
+                direction = Vector3Normalize(direction);
+
+                forwardsOffset = Vector3DotProduct(direction, GetCameraForward(&camera));
+                rightOffset = Vector3DotProduct(direction, GetCameraRight(&camera));
             }
         }
 
         UpdateCameraPro(&camera,
-                /* { forward-backward, left-right, up-down } */ delta,
+                /* { forward-backward, left-right, up-down } */ (Vector3) { forwardsOffset, rightOffset, yOffset },
                 /* { yaw, pitch, roll } */ (Vector3) { md.x * 0.05f, md.y * 0.05f, 0.0f },
                 /* zoom */ 0.0f);
         //----------------------------------------------------------------------------------
@@ -190,9 +183,31 @@ int main(void)
                 // Vector3 endPos = camera.position;
                 // endPos.y += 10.;
                 // DrawCapsule(camera.position, endPos, 10., 10, 10, BLUE);
-                DrawCube(camera.position, 10., 10., 10., BLUE);
+                if (!currentTarget.arrived) {
+                    DrawCube(currentTarget.destination, 10, 10, 10, RED);
+                }
+
 
             EndMode3D();
+
+            Vector2 middle = (Vector2){GetScreenWidth() / 2., GetScreenHeight() / 2.};
+
+            int crosshairOffset = CROSSHAIR_LENGTH / 2.;
+            DrawRectangle(
+                middle.x - crosshairOffset,
+                middle.y - 1.,
+                CROSSHAIR_LENGTH,
+                2,
+                GRAY
+            );
+
+            DrawRectangle(
+                middle.x - 1.,
+                middle.y - crosshairOffset,
+                2,
+                CROSSHAIR_LENGTH,
+                GRAY
+            );
 
             DrawFPS(10, 10);
 
