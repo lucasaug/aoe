@@ -13,7 +13,7 @@ typedef struct Ground {
     Model model;
 } Ground;
 
-void GenerateGround(int32_t, int32_t, Ground*);
+void InitGround(Ground*, int32_t, int32_t);
 
 void FreeGround(const Ground*);
 

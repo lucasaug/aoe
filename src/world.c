@@ -5,7 +5,7 @@
 
 #include "world.h"
 
-void GenerateGround(int32_t width, int32_t height, Ground* ground) {
+void InitGround(Ground* ground, int32_t width, int32_t height) {
     ground->origin = (Vector3){.x = 0., .y = -100., .z = 0.};
     Image noise = GenImagePerlinNoise(500., 500., 0., 0., 4.);
     Mesh heightmapMesh = GenMeshHeightmap(noise, (Vector3){

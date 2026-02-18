@@ -15,7 +15,8 @@ main:
 	${CC} ${CFLAGS} -c src/hud.c -o hud.o -Iinclude/
 	${CC} ${CFLAGS} -c src/player.c -o player.o -Iinclude/
 	${CC} ${CFLAGS} -c src/world.c -o world.o -Iinclude/
-	${CC} ${CFLAGS} world.o player.o hud.o src/main.c  -o main -Llib -Iinclude/ $(LIBS)
+	${CC} ${CFLAGS} -c src/scene.c -o scene.o -Iinclude/
+	${CC} ${CFLAGS} scene.o world.o player.o hud.o src/main.c  -o main -Llib -Iinclude/ $(LIBS)
 
 # TODO fix
 .PHONY: main clean

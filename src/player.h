@@ -15,7 +15,7 @@ typedef struct Player {
     MovementTarget currentTarget;
 } Player;
 
-Player InitPlayer(float);
+void InitPlayer(Player*, float);
 
 void SetPlayerTarget(Player*, const Vector3);
 
