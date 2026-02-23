@@ -28,12 +28,11 @@ void UpdateScene(Scene* scene) {
     const int screenHeight = scene->screenHeight;
 
     Vector2 md = GetMouseDelta();
-    Vector2 screenCenter = { scene->screenWidth/2.0f, screenHeight/2.0f };
+    Vector2 screenCenter = { screenWidth/2.0f, screenHeight/2.0f };
 
     RayCollision groundCollision = {0};
     bool pressed = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
     if (pressed) {
-        Vector2 screenCenter = { screenWidth/2.0f, screenHeight/2.0f };
         Ray clickRay = GetScreenToWorldRay(screenCenter, scene->player.camera);
         clickRay.position.y += 50;
 
@@ -116,4 +115,8 @@ void RenderScene(Scene* scene) {
         DrawHUD(ray, scene->player.camera);
 
     EndDrawing();
+}
+
+void FreeScene(const Scene* scene) {
+    FreeGround(&scene->ground);
 }

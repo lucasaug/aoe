@@ -18,4 +18,6 @@ void UpdateScene(Scene*);
 
 void RenderScene(Scene*);
 
+void FreeScene(const Scene*);
+
 #endif // SCENE_H

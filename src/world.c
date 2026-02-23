@@ -16,6 +16,7 @@ void InitGround(Ground* ground, int32_t width, int32_t height) {
     ImageColorTint(&noise, GREEN);
     Texture2D groundTexture = LoadTextureFromImage(noise);
     ground->model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = groundTexture;
+
     UnloadImage(noise);
 }
 
