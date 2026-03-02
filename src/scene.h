@@ -10,6 +10,8 @@ typedef struct Scene {
 
     int screenWidth;
     int screenHeight;
+
+    int value;
 } Scene;
 
 void InitScene(Scene*, int, int, float);

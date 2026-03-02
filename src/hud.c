@@ -3,7 +3,7 @@
 
 #include "hud.h"
 
-void DrawHUD(Ray ray, Camera camera) {
+void DrawHUD(Ray ray, Camera camera, int value) {
     Vector2 middle = (Vector2){GetScreenWidth() / 2., GetScreenHeight() / 2.};
 
     int crosshairOffset = CROSSHAIR_LENGTH / 2.;
@@ -34,6 +34,7 @@ void DrawHUD(Ray ray, Camera camera) {
     DrawText(TextFormat("Direction Y: %f", ray.direction.y), 500, 100, 20, RED);
     DrawText(TextFormat("Direction Z: %f", ray.direction.z), 500, 120, 20, RED);
 
+    DrawText(TextFormat("Network value: %d", value), 200, 180, 20, RED);
     // DrawText(TextFormat("Moving to:"), 200, 180, 20, RED);
     // DrawText(TextFormat("Arrived: %d", currentTarget.arrived), 200, 200, 20, RED);
     // DrawText(TextFormat("%f", currentTarget.destination.x), 200, 220, 20, RED);

@@ -4,6 +4,6 @@
 #define CROSSHAIR_LENGTH 10
 #include <raylib/raylib.h>
 
-void DrawHUD(Ray, Camera);
+void DrawHUD(Ray, Camera, int);
 
 #endif // HUD_H

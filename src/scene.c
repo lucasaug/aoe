@@ -112,7 +112,7 @@ void RenderScene(Scene* scene) {
         // DrawText(TextFormat("Position X: %f", ground.origin.x), 200, 80, 20, RED);
         // DrawText(TextFormat("Position Y: %f", ground.origin.y), 200, 100, 20, RED);
         // DrawText(TextFormat("Position Z: %f", ground.origin.z), 200, 120, 20, RED);
-        DrawHUD(ray, scene->player.camera);
+        DrawHUD(ray, scene->player.camera, scene->value);
 
     EndDrawing();
 }
