@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#define PORT "1234"
+#define PORT "1235"
 #define BACKLOG 10
 
 int main(int argc, char *argv[])

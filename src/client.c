@@ -2,20 +2,35 @@
 #include <netdb.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
+
 
 #include "raylib/raylib.h"
 
 #include "scene.h"
 #include "world.h"
 
-#define PORT "1234"
+#define PORT "1235"
 
+void sigchld_handler(int s)
+{
+    (void)s; // quiet unused variable warning
+
+    // waitpid() might overwrite errno, so we save and restore it:
+    int saved_errno = errno;
+
+    while(waitpid(-1, NULL, WNOHANG) > 0);
+
+    errno = saved_errno;
+}
+
+static int received_value = -1;
 
 int main(void) {
-    int received_value = -1;
     if (!fork()) {
         struct addrinfo hints, *res;
         int status;
@@ -40,7 +55,10 @@ int main(void) {
             return 4;
         }
 
-        while (recv(sockfd, &received_value, sizeof(int), 0)) {}
+        while (recv(sockfd, &received_value, sizeof(int), 0)) {
+            sleep(1);
+        }
+        exit(0);
     }
 
     const int screenWidth = 800;
