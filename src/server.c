@@ -21,33 +21,29 @@ int main(int argc, char *argv[])
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-
-    printf("1");
     if ((status = getaddrinfo(NULL, PORT, &hints, &res)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
         return 2;
     }
 
-    printf("2");
     int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (sockfd == -1) {
         fprintf(stderr, "error creating socket: %d\n", errno);
         return 3;
     }
 
-    printf("3");
     if (bind(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
         fprintf(stderr, "error binding: %d\n", errno);
         return 4;
     }
 
-    printf("almos");
     if (listen(sockfd, BACKLOG) == -1) {
         fprintf(stderr, "error listening: %d\n", errno);
         return 5;
     }
 
-    printf("Listening...");
+    printf("Listening...\n");
+    fflush(stdout);
     struct sockaddr_storage their_addr;
     socklen_t addr_size;
     int newfd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
@@ -57,13 +53,16 @@ int main(int argc, char *argv[])
     }
     close(sockfd);
 
-    printf("Connected!");
+    printf("Connected!\n");
+    fflush(stdout);
     int counter = 0;
     while (1) {
         if (send(newfd, &counter, sizeof(int), 0) == -1) {
             fprintf(stderr, "error sending: %d\n", errno);
             return 7;
         }
+        printf("Sent the value %d\n", counter);
+        fflush(stdout);
         sleep(5);
         counter++;
     }
