@@ -46,28 +46,35 @@ int main(int argc, char *argv[])
     fflush(stdout);
     struct sockaddr_storage their_addr;
     socklen_t addr_size;
-    int newfd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
-    if (newfd == -1) {
-        fprintf(stderr, "error accepting: %d\n", errno);
-        return 6;
+
+    while(1) {
+        int newfd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+        if (newfd == -1) {
+            fprintf(stderr, "error accepting: %d\n", errno);
+            return 6;
+        }
+
+        if (!fork()) {
+            printf("Connected!\n");
+            fflush(stdout);
+            int counter = 0;
+            while (1) {
+                if (send(newfd, &counter, sizeof(int), 0) == -1) {
+                    fprintf(stderr, "error sending: %d\n", errno);
+                    return 7;
+                }
+                printf("Sent the value %d\n", counter);
+                fflush(stdout);
+                sleep(5);
+                counter++;
+            }
+
+            close(newfd);
+        }
     }
+
     close(sockfd);
 
-    printf("Connected!\n");
-    fflush(stdout);
-    int counter = 0;
-    while (1) {
-        if (send(newfd, &counter, sizeof(int), 0) == -1) {
-            fprintf(stderr, "error sending: %d\n", errno);
-            return 7;
-        }
-        printf("Sent the value %d\n", counter);
-        fflush(stdout);
-        sleep(5);
-        counter++;
-    }
-
-    close(newfd);
     freeaddrinfo(res);
 
     return 0;

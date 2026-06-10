@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 
+#include "messages.h"
 #include "raylib/raylib.h"
 
 #include "scene.h"
@@ -57,15 +58,18 @@ int main(void) {
 
     DisableCursor();
     SetTargetFPS(60);
-    //--------------------------------------------------------------------------------------
+
+    bool gotOtherPlayer = false;
 
     while (!WindowShouldClose()) {
-        int newval;
-        int result = recv(sockfd, &newval, sizeof(int), 0);
+        enum MessageType msg;
+        int result = recv(sockfd, &msg, sizeof(enum MessageType), 0);
         if (result != -1) {
+
+            int result = recv(sockfd, &msg, sizeof(enum MessageType), 0);
             received_value = newval;
         } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            printf("Error! recv\n");
+            printf("Error! recv: %d\n", errno);
             break;
         }
         UpdateScene(&scene);
@@ -73,11 +77,8 @@ int main(void) {
         RenderScene(&scene);
     }
 
-    // De-Initialization
-    //--------------------------------------------------------------------------------------
     FreeScene(&scene);
     CloseWindow();
-    //--------------------------------------------------------------------------------------
 
     return 0;
 }

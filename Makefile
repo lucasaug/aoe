@@ -18,8 +18,11 @@ main:
 	${CC} ${CFLAGS} -c src/scene.c -o scene.o -Iinclude/
 	${CC} ${CFLAGS} scene.o world.o player.o hud.o src/client.c  -o client -Llib -Iinclude/ $(LIBS)
 
+server:
+	${CC} ${CFLAGS} src/server.c -o server -Iinclude/
+
 # TODO fix
-.PHONY: main clean
+.PHONY: server main clean
 
 clean:
 	rm -f $(BUILD_DIR)/*.o

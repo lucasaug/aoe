@@ -3,7 +3,7 @@
 
 #include "raylib/raylib.h"
 
-enum message_type {
+enum MessageType {
     PLAYER_POSITION
 };
 
