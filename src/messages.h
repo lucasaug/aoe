@@ -12,4 +12,8 @@ typedef struct PlayerPosition {
     unsigned int id;
 } PlayerPosition;
 
+
+void* recvMessage(int, enum MessageType);
+int sendMessage(int, enum MessageType, void*);
+
 #endif // MESSAGES_H

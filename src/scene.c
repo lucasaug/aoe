@@ -18,6 +18,7 @@ void InitScene(
 ) {
     scene->screenWidth = screenWidth;
     scene->screenHeight = screenHeight;
+    scene->gotOtherPlayer = false;
 
     InitPlayer(&(scene->player), playerHeight);
     InitGround(&scene->ground, 10000, 10000);
@@ -104,6 +105,10 @@ void RenderScene(Scene* scene) {
 
             if (!scene->player.currentTarget.arrived) {
                 DrawCube(scene->player.currentTarget.destination, 10, 10, 10, RED);
+            }
+
+            if (scene->gotOtherPlayer) {
+                DrawCube(scene->otherPlayerPos, 10, 10, 10, GREEN);
             }
 
         EndMode3D();

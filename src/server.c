@@ -1,3 +1,4 @@
+#include "messages.h"
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -47,12 +48,17 @@ int main(int argc, char *argv[])
     struct sockaddr_storage their_addr;
     socklen_t addr_size;
 
+    unsigned int conn_counter = 0;
+    PlayerPosition posList[2];
+
     while(1) {
         int newfd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
         if (newfd == -1) {
             fprintf(stderr, "error accepting: %d\n", errno);
             return 6;
         }
+
+
 
         if (!fork()) {
             printf("Connected!\n");

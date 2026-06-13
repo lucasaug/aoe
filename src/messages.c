@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 
-int recvMessage(int sockfd, enum MessageType type, void* msg) {
+void* recvMessage(int sockfd, enum MessageType type) {
     if (type == PLAYER_POSITION) {
         float x, y, z;
         unsigned int id;
@@ -12,45 +12,35 @@ int recvMessage(int sockfd, enum MessageType type, void* msg) {
         recv(sockfd, &z, sizeof(float), 0);
         recv(sockfd, &id, sizeof(unsigned int), 0);
 
+        PlayerPosition* msg = malloc(sizeof(PlayerPosition));
+
         // TODO do actual deserialization here
-        Vector3 position = (Vector3) { x, y, z };
-        PlayerPosition* playerPos = (PlayerPosition*)
-            malloc(sizeof(PlayerPosition));
+        msg->position.x = x;
+        msg->position.y = y;
+        msg->position.z = z;
+        msg->id = id;
 
-        playerPos->position.x = x;
-        playerPos->position.y = y;
-        playerPos->position.z = z;
-        playerPos->id = id;
-
-        msg = (void*)playerPos;
-
-        return sizeof(PlayerPosition);
+        return msg;
     }
 
-    return -1;
+    return NULL;
+}
+
+void freeMessage(void* msg) {
+    free(msg);
 }
 
 
 int sendMessage(int sockfd, enum MessageType type, void* msg) {
     if (type == PLAYER_POSITION) {
-        float x, y, z;
-        unsigned int id;
-        recv(sockfd, &x, sizeof(float), 0);
-        recv(sockfd, &y, sizeof(float), 0);
-        recv(sockfd, &z, sizeof(float), 0);
-        recv(sockfd, &id, sizeof(unsigned int), 0);
+        PlayerPosition* playerPosMsg = (PlayerPosition*) msg;
 
-        // TODO do actual deserialization here
-        Vector3 position = (Vector3) { x, y, z };
-        PlayerPosition* playerPos = (PlayerPosition*)
-            malloc(sizeof(PlayerPosition));
-
-        playerPos->position.x = x;
-        playerPos->position.y = y;
-        playerPos->position.z = z;
-        playerPos->id = id;
-
-        msg = (void*)playerPos;
+        // TODO do actual serialization here
+        send(sockfd, &type, sizeof(enum MessageType), 0);
+        send(sockfd, &(playerPosMsg->position.x), sizeof(float), 0);
+        send(sockfd, &(playerPosMsg->position.y), sizeof(float), 0);
+        send(sockfd, &(playerPosMsg->position.z), sizeof(float), 0);
+        send(sockfd, &(playerPosMsg->id), sizeof(unsigned int), 0);
 
         return sizeof(PlayerPosition);
     }

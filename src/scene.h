@@ -14,6 +14,7 @@ typedef struct Scene {
 
     int value;
 
+    bool gotOtherPlayer;
     Vector3 otherPlayerPos;
 } Scene;
 

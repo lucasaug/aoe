@@ -46,6 +46,18 @@ int connect_to_server() {
 }
 
 
+int handle_message(Scene* scene, enum MessageType type, void* msg) {
+    if (type == PLAYER_POSITION) {
+        PlayerPosition* playerPosMsg = (PlayerPosition*) msg;
+        scene->otherPlayerPos = playerPosMsg->position;
+
+        return 0;
+    }
+
+    return -1;
+}
+
+
 int main(void) {
     int sockfd = connect_to_server();
     int received_value = -1;
@@ -59,19 +71,35 @@ int main(void) {
     DisableCursor();
     SetTargetFPS(60);
 
-    bool gotOtherPlayer = false;
+    unsigned int id = GetRandomValue(0, 500);
 
     while (!WindowShouldClose()) {
-        enum MessageType msg;
-        int result = recv(sockfd, &msg, sizeof(enum MessageType), 0);
+        enum MessageType type;
+        int result = recv(sockfd, &type, sizeof(enum MessageType), 0);
         if (result != -1) {
+            void* msg = recvMessage(sockfd, type);
 
-            int result = recv(sockfd, &msg, sizeof(enum MessageType), 0);
-            received_value = newval;
+            if (msg == NULL) {
+                printf("Error! recvMessage result is NULL");
+                break;
+            }
+
+            int handlerResult = handle_message(&scene, type, msg);
+            if (handlerResult == -1) {
+                printf("Error! handle_message: %d\n", handlerResult);
+                break;
+            }
         } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
             printf("Error! recv: %d\n", errno);
             break;
         }
+
+        PlayerPosition msg = (PlayerPosition) {
+            scene.player.camera.position,
+            id
+        };
+        sendMessage(sockfd, PLAYER_POSITION, &msg);
+
         UpdateScene(&scene);
         scene.value = received_value;
         RenderScene(&scene);
