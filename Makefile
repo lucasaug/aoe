@@ -20,7 +20,8 @@ main:
 	${CC} ${CFLAGS} messages.o scene.o world.o player.o hud.o src/client.c  -o client -Llib -Iinclude/ $(LIBS)
 
 server:
-	${CC} ${CFLAGS} src/server.c -o server -Iinclude/
+	${CC} ${CFLAGS} -c src/messages.c -o messages.o -Iinclude/
+	${CC} ${CFLAGS} messages.o src/server.c -o server -Iinclude/
 
 # TODO fix
 .PHONY: server main clean

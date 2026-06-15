@@ -3,6 +3,7 @@
 #include <netdb.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -46,10 +47,13 @@ int connect_to_server() {
 }
 
 
-int handle_message(Scene* scene, enum MessageType type, void* msg) {
+int handle_message(Scene* scene, unsigned int myid, enum MessageType type, void* msg) {
     if (type == PLAYER_POSITION) {
         PlayerPosition* playerPosMsg = (PlayerPosition*) msg;
-        scene->otherPlayerPos = playerPosMsg->position;
+        if (myid != playerPosMsg->id) {
+            scene->gotOtherPlayer = true;
+            scene->otherPlayerPos = playerPosMsg->position;
+        }
 
         return 0;
     }
@@ -80,15 +84,16 @@ int main(void) {
             void* msg = recvMessage(sockfd, type);
 
             if (msg == NULL) {
-                printf("Error! recvMessage result is NULL");
+                printf("Error! recvMessage result is NULL\n");
                 break;
             }
 
-            int handlerResult = handle_message(&scene, type, msg);
+            int handlerResult = handle_message(&scene, id, type, msg);
             if (handlerResult == -1) {
                 printf("Error! handle_message: %d\n", handlerResult);
                 break;
             }
+            free(msg);
         } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
             printf("Error! recv: %d\n", errno);
             break;

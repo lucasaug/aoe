@@ -8,9 +8,87 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 #define PORT "1235"
 #define BACKLOG 10
+
+unsigned int conn_counter = 0;
+PlayerPosition posList[2];
+
+typedef struct ThreadArgs {
+    int sockfd;
+    unsigned int playerOffset;
+} ThreadArgs;
+
+void *handle_client(void *input) {
+    ThreadArgs* args = (ThreadArgs*)input;
+    unsigned int id;
+    bool gotId = false;
+
+    int sockfd = args->sockfd;
+    int playerOffset = args->playerOffset;
+
+    printf("Connected!\n");
+    fflush(stdout);
+
+    while (1) {
+        printf("sockfd: %d\n", sockfd);
+        fflush(stdout);
+
+        enum MessageType type;
+        int result = recv(sockfd, &type, sizeof(enum MessageType), 0);
+
+        if (result != -1) {
+            void* msg = recvMessage(sockfd, type);
+
+            if (msg == NULL) {
+                printf("Error! recvMessage result is NULL");
+                fflush(stdout);
+                break;
+            }
+
+            if (type != PLAYER_POSITION) {
+                printf("Error! Unknown message type: %d", type);
+                fflush(stdout);
+                break;
+            }
+
+            PlayerPosition* playerPosMsg = (PlayerPosition*) msg;
+            printf("Got player position message (id=%u):\n", playerPosMsg->id);
+            printf("Position:\n");
+            printf("x: %f\n", playerPosMsg->position.x);
+            printf("y: %f\n", playerPosMsg->position.y);
+            printf("z: %f\n", playerPosMsg->position.z);
+            posList[playerOffset] = *playerPosMsg;
+
+            fflush(stdout);
+        } else {
+            fprintf(stderr, "Error in thread: %d\n", errno);
+            fflush(stderr);
+            break;
+        }
+
+        for (int i = 0; i < conn_counter; i++) {
+            int sendResult = sendMessage(sockfd, PLAYER_POSITION, (void*)(&posList[i]));
+            if (sendResult == -1) {
+                fprintf(stderr, "Error in sendMessage: \n");
+                fflush(stderr);
+                break;
+            }
+        }
+        /* if (send(sockfd, &counter, sizeof(int), 0) == -1) {
+            fprintf(stderr, "error sending: %d\n", errno);
+            break;
+        }
+        printf("Sent the value %d\n", counter);
+        fflush(stdout);
+        sleep(5);
+        counter++; */
+    }
+
+    close(sockfd);
+}
 
 int main(int argc, char *argv[])
 {
@@ -48,8 +126,7 @@ int main(int argc, char *argv[])
     struct sockaddr_storage their_addr;
     socklen_t addr_size;
 
-    unsigned int conn_counter = 0;
-    PlayerPosition posList[2];
+    pthread_t tid[2];
 
     while(1) {
         int newfd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
@@ -58,26 +135,17 @@ int main(int argc, char *argv[])
             return 6;
         }
 
+        // TODO keeping this in the stack might be a bad idea
+        ThreadArgs args;
+        args.sockfd = newfd;
+        args.playerOffset = conn_counter;
 
-
-        if (!fork()) {
-            printf("Connected!\n");
-            fflush(stdout);
-            int counter = 0;
-            while (1) {
-                if (send(newfd, &counter, sizeof(int), 0) == -1) {
-                    fprintf(stderr, "error sending: %d\n", errno);
-                    return 7;
-                }
-                printf("Sent the value %d\n", counter);
-                fflush(stdout);
-                sleep(5);
-                counter++;
-            }
-
-            close(newfd);
-        }
+        pthread_create(&tid[conn_counter], NULL, handle_client, (void*)&args);
+        ++conn_counter;
     }
+
+    pthread_join(tid[0], NULL);
+    pthread_join(tid[1], NULL);
 
     close(sockfd);
 
